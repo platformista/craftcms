@@ -1,0 +1,116 @@
+# This file describes an application. You can have multiple applications
+# in the same project.
+#
+# See https://docs.platform.sh/configuration/app.html
+
+# The name of this app. Must be unique within a project.
+name: 'craftcms'
+
+# The runtime the application uses.
+type: 'php:8.1'
+
+dependencies:
+  php:
+    composer/composer: '^2'
+
+runtime:
+  # CraftCMS also requires extensions which are "always-on" with Platform.sh: openssl, pcre, Reflection, SPL
+  extensions:
+    - bcmath
+    - ctype
+    - curl
+    - dom
+    - iconv
+    - imagick
+    - intl
+    #- json
+    - mbstring
+    - pdo_mysql
+    #- PDO
+    - zip
+
+# The relationships of the application with services or other applications.
+#
+# The left-hand side is the name of the relationship as it will be exposed
+# to the application in the PLATFORM_RELATIONSHIPS variable. The right-hand
+# side is in the form `<service name>:<endpoint name>`.
+relationships:
+  database: 'db:mysql'
+
+# The size of the persistent disk of the application (in MB).
+disk: 2048
+
+# The 'mounts' describe writable, persistent filesystem mounts in the application.
+mounts:
+  '/config/project':
+    source: local
+    source_path: 'config/project'
+  '/config/license':
+    source: local
+    source_path: 'config/license'
+  '/storage':
+    source: local
+    source_path: 'storage'
+  '/web/cpresources':
+    source: local
+    source_path: 'web/cpresources'
+
+
+# Configuration of the build of this application.
+build:
+  flavor: none
+
+hooks:
+  build: |
+    set -e
+    composer install --no-interaction
+  deploy: |
+    set -e
+
+    if [ "$(php craft install/craft --interactive=0 | grep -i "already installed" | wc -l)" = 0 ]; then
+      php craft install/craft --interactive=0 --email="admin@change.me" --language="en-GB" --password="changeme" --username="admin" --site-name="Just a CraftCMS Site" --site-url="/"
+    fi
+
+    php craft migrate/all --no-content --interactive=0
+    php craft project-config/apply
+    php craft migrate --track=content --interactive=0
+
+# The configuration of app when it is exposed to the web.
+web:
+  locations:
+    # All requests not otherwise specified follow these rules.
+    '/':
+      # The folder from which to serve static assets, for this location.
+      #
+      # This is a filesystem path, relative to the application root.
+      root: 'web'
+
+      # How long to allow static assets from this location to be cached.
+      #
+      # Can be a time in seconds, or -1 for no caching. Times can be
+      # suffixed with "s" (seconds), "m" (minutes), "h" (hours), "d"
+      # (days), "w" (weeks), "M" (months, as 30 days) or "y" (years, as
+      # 365 days).
+      expires: 5m
+
+      # Redirect any incoming request to Drupal's front controller.
+      passthru: '/index.php'
+
+      # Deny access to all static files, except those specifically allowed below.
+      allow: false
+
+      # Rules for specific URI patterns.
+      rules:
+        # Allow access to common static files.
+        '\.(jpe?g|png|gif|svgz?|css|js|map|ico|bmp|eot|woff2?|otf|ttf)$':
+          allow: true
+        '^/robots\.txt$':
+          allow: true
+        '^/sitemap\.xml$':
+          allow: true
+
+variables:
+  php:
+    memory_limit: "512M"
+
+

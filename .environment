@@ -1,0 +1,30 @@
+# Statements in this file will be executed (sourced) by the shell in SSH
+# sessions, in deploy hooks, in cron jobs, and in the application's runtime
+# environment. This file must be placed in the root of the application, not
+# necessarily the git repository's root. In case of multiple applications,
+# each application can have its own .environment file.
+
+# Allow executable app dependencies from Composer to be run from the path.
+if [ -n "$PLATFORM_APP_DIR" -a -f "$PLATFORM_APP_DIR"/composer.json ] ; then
+  bin=$(composer config bin-dir --working-dir="$PLATFORM_APP_DIR" --no-interaction 2>/dev/null)
+  export PATH="${PLATFORM_APP_DIR}/${bin:-vendor/bin}:${PATH}"
+fi
+
+# The application ID used to to uniquely store session and cache data, mutex locks, and more
+export CRAFT_APP_ID=CraftCMS--a1009478-f2fc-4d84-9049-19a44a745baa
+
+# The environment Craft is currently running in (dev, staging, production, etc.)
+export CRAFT_ENVIRONMENT=$PLATFORM_ENVIRONMENT_TYPE
+
+# The secure key Craft will use for hashing and encrypting data
+export CRAFT_SECURITY_KEY=ndmDgLQtTeOZ2zvUb0c-LmvDIK2DV_6K
+
+# Database Configuration
+export CRAFT_DB_DRIVER=mysql
+export CRAFT_DB_SERVER=$(echo $PLATFORM_RELATIONSHIPS | base64 --decode | jq -r '.database[0].host')
+export CRAFT_DB_PORT=$(echo $PLATFORM_RELATIONSHIPS | base64 --decode | jq -r '.database[0].port')
+export CRAFT_DB_DATABASE=$(echo $PLATFORM_RELATIONSHIPS | base64 --decode | jq -r '.database[0].path')
+export CRAFT_DB_USER=$(echo $PLATFORM_RELATIONSHIPS | base64 --decode | jq -r '.database[0].username')
+export CRAFT_DB_PASSWORD=$(echo $PLATFORM_RELATIONSHIPS | base64 --decode | jq -r '.database[0].password')
+export CRAFT_DB_SCHEMA=public
+CRAFT_DB_TABLE_PREFIX=
